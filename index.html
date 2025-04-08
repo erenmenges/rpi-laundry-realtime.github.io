@@ -8,8 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Basic Custom Styles (Tailwind will handle most) */
+        /* Basic Custom Styles & Variables */
         :root {
             --primary-color: #3b82f6; /* Tailwind blue-500 */
             --secondary-color: #10b981; /* Tailwind emerald-500 */
@@ -17,10 +20,14 @@
             --dark-color: #374151; /* Tailwind gray-700 */
             --light-color: #f3f4f6; /* Tailwind gray-100 */
             --transition-speed: 0.3s;
+            --progress-dark-bg: #374151; /* gray-700 for dark items */
+            --progress-light-bg: #e5e7eb; /* gray-200 for light items */
         }
 
         body {
             font-family: 'Inter', sans-serif; /* Using Inter font */
+            background-color: var(--light-color);
+            color: var(--dark-color);
         }
 
         /* Custom animation for the alert */
@@ -38,22 +45,29 @@
             color: white;
             font-weight: bold;
             text-shadow: 1px 1px 1px rgba(0,0,0,0.3); /* Add shadow for better readability */
+            font-size: 0.75rem; /* text-xs */
         }
         .progress-bar-light-text {
              color: #333; /* Dark text for light background */
              font-weight: bold;
              text-shadow: none; /* No shadow needed */
+             font-size: 0.75rem; /* text-xs */
         }
 
-        /* Custom colors for progress bars (can be overridden by JS) */
-        .progress-bar-dark { background-color: #333; }
-        .progress-bar-light { background-color: #eaeaea; }
-        .progress-bar-left { background-color: var(--primary-color); }
-        .progress-bar-right { background-color: var(--secondary-color); }
+        /* Custom colors for progress bars */
+        .progress-bar-dark { background-color: var(--progress-dark-bg); }
+        .progress-bar-light { background-color: var(--progress-light-bg); }
+        .progress-bar-left { background-color: var(--primary-color); } /* For Dark Bin fullness */
+        .progress-bar-right { background-color: var(--secondary-color); } /* For Light Bin fullness */
         .progress-bar-fullness-low { background-color: var(--secondary-color); } /* Green */
         .progress-bar-fullness-medium { background-color: #f59e0b; } /* Amber-500 */
         .progress-bar-fullness-high { background-color: var(--warning-color); } /* Red */
 
+        /* Ensure flex container for split bar doesn't wrap */
+        .split-progress-bar {
+            display: flex;
+            flex-wrap: nowrap;
+        }
 
     </style>
 </head>
@@ -76,33 +90,22 @@
             <div class="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition-shadow duration-300">
                 <div class="flex items-center mb-4">
                     <div class="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3 text-xl">
-                        <i class="fas fa-tshirt"></i>
-                    </div>
-                    <h2 class="text-lg font-semibold text-gray-700">Clothing Distribution</h2>
+                        <i class="fas fa-adjust"></i> </div>
+                    <h2 class="text-lg font-semibold text-gray-700">Dark vs. Light Ratio</h2>
                 </div>
 
-                <div class="mb-3">
-                    <div class="flex justify-between items-center mb-1 text-sm">
-                        <span class="font-medium text-gray-600">Dark Items:</span>
-                        <span class="font-bold text-gray-800" id="coloredPercentage">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-5 overflow-hidden">
-                        <div id="coloredBar" class="progress-bar-dark h-full rounded-full flex items-center justify-center transition-all duration-500 ease-out" style="width: 0%">
-                            <span class="progress-bar-text text-xs">0%</span>
-                        </div>
-                    </div>
+                <div class="mb-3 text-sm text-center">
+                    <span class="font-medium text-gray-600">Dark:</span>
+                    <span class="font-bold text-gray-800" id="darkRatioText">0%</span> |
+                    <span class="font-medium text-gray-600">Light:</span>
+                    <span class="font-bold text-gray-800" id="lightRatioText">0%</span>
                 </div>
 
-                <div>
-                    <div class="flex justify-between items-center mb-1 text-sm">
-                        <span class="font-medium text-gray-600">Light Items:</span>
-                        <span class="font-bold text-gray-800" id="whitePercentage">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-5 overflow-hidden">
-                        <div id="whiteBar" class="progress-bar-light h-full rounded-full flex items-center justify-center transition-all duration-500 ease-out" style="width: 0%">
-                             <span class="progress-bar-light-text text-xs">0%</span>
-                        </div>
-                    </div>
+                <div class="w-full bg-gray-300 rounded-full h-5 overflow-hidden split-progress-bar">
+                    <div id="darkRatioBar" class="progress-bar-dark h-full flex items-center justify-center transition-all duration-500 ease-out" style="width: 0%">
+                         <span class="progress-bar-text"></span> </div>
+                    <div id="lightRatioBar" class="progress-bar-light h-full flex items-center justify-center transition-all duration-500 ease-out" style="width: 100%">
+                         <span class="progress-bar-light-text"></span> </div>
                 </div>
             </div>
 
@@ -128,28 +131,28 @@
 
                 <div class="mb-3">
                      <div class="flex justify-between items-center mb-1 text-sm">
-                        <div class="flex items-center">
+                         <div class="flex items-center">
                              <span class="w-3 h-3 rounded-full mr-2" style="background-color: var(--primary-color);"></span>
                              <span class="font-medium text-gray-600">Dark Bin:</span>
-                        </div>
-                        <span class="font-semibold text-gray-800" id="leftBinOccupancy">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                        <div id="leftBinBar" class="progress-bar-left h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
-                    </div>
+                         </div>
+                         <span class="font-semibold text-gray-800" id="leftBinOccupancy">0%</span>
+                     </div>
+                     <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                         <div id="leftBinBar" class="progress-bar-left h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                     </div>
                 </div>
 
                 <div>
                      <div class="flex justify-between items-center mb-1 text-sm">
-                         <div class="flex items-center">
-                             <span class="w-3 h-3 rounded-full mr-2" style="background-color: var(--secondary-color);"></span>
-                             <span class="font-medium text-gray-600">Light Bin:</span>
-                         </div>
-                        <span class="font-semibold text-gray-800" id="rightBinOccupancy">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                        <div id="rightBinBar" class="progress-bar-right h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
-                    </div>
+                           <div class="flex items-center">
+                               <span class="w-3 h-3 rounded-full mr-2" style="background-color: var(--secondary-color);"></span>
+                               <span class="font-medium text-gray-600">Light Bin:</span>
+                           </div>
+                         <span class="font-semibold text-gray-800" id="rightBinOccupancy">0%</span>
+                     </div>
+                     <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                         <div id="rightBinBar" class="progress-bar-right h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                     </div>
                 </div>
             </div>
 
@@ -185,45 +188,57 @@
 
     <script>
         // Firebase configuration - IMPORTANT: replace with your actual Firebase project details
+        // Make sure these are correctly filled in for your project.
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // Replace
-            authDomain: "YOUR_AUTH_DOMAIN", // Replace
-            databaseURL: "YOUR_DATABASE_URL", // Replace
-            projectId: "YOUR_PROJECT_ID", // Replace
-            storageBucket: "YOUR_STORAGE_BUCKET", // Replace
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace
-            appId: "YOUR_APP_ID" // Replace
-        };
+      apiKey: "AIzaSyDw2Y07IYmFYz2IokzHlvirDhhDOG1cloI",
+      authDomain: "rpi-laundry-realtime.firebaseapp.com",
+      databaseURL: "https://rpi-laundry-realtime-default-rtdb.firebaseio.com",
+      projectId: "rpi-laundry-realtime",
+      storageBucket: "rpi-laundry-realtime.firebasestorage.app",
+      messagingSenderId: "671997705566",
+      appId: "1:671997705566:web:1dcfacfbfab2b0a86f23cf"
+    };
 
         // Initialize Firebase
         try {
-            firebase.initializeApp(firebaseConfig);
+            if (!firebase.apps.length) { // Prevent re-initialization
+                 firebase.initializeApp(firebaseConfig);
+            }
         } catch (e) {
             console.error("Firebase initialization error:", e);
-            alert("Error initializing Firebase. Please check your configuration.");
+            // Avoid using alert in production, consider a less intrusive notification
+            // alert("Error initializing Firebase. Please check your configuration.");
+            document.body.insertAdjacentHTML('afterbegin', '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert"><strong class="font-bold">Firebase Error!</strong><span class="block sm:inline"> Could not initialize Firebase. Check console and configuration.</span></div>');
         }
 
         // Reference to the database
         const database = firebase.database();
 
         // --- DOM Element References ---
-        const coloredPercentageEl = document.getElementById('coloredPercentage');
-        const whitePercentageEl = document.getElementById('whitePercentage');
-        const coloredBarEl = document.getElementById('coloredBar');
-        const whiteBarEl = document.getElementById('whiteBar');
+        // Ratio Card Elements
+        const darkRatioTextEl = document.getElementById('darkRatioText');
+        const lightRatioTextEl = document.getElementById('lightRatioText');
+        const darkRatioBarEl = document.getElementById('darkRatioBar');
+        const lightRatioBarEl = document.getElementById('lightRatioBar');
+        const darkRatioBarTextSpan = darkRatioBarEl.querySelector('span'); // Optional text inside bar
+        const lightRatioBarTextSpan = lightRatioBarEl.querySelector('span'); // Optional text inside bar
+
+        // Fullness Card Elements
         const overallFullnessEl = document.getElementById('overallFullness');
         const fullnessBarEl = document.getElementById('fullnessBar');
+        const fullnessBarTextEl = fullnessBarEl.querySelector('span'); // Get span inside fullness bar
         const leftBinOccupancyEl = document.getElementById('leftBinOccupancy');
         const rightBinOccupancyEl = document.getElementById('rightBinOccupancy');
         const leftBinBarEl = document.getElementById('leftBinBar');
         const rightBinBarEl = document.getElementById('rightBinBar');
+
+        // Info Card Elements
         const lastLaundryDateEl = document.getElementById('lastLaundryDate');
         const daysSinceWashEl = document.getElementById('daysSinceWash');
         const lastUpdateEl = document.getElementById('lastUpdate');
+
+        // Alert Element
         const timeToWashAlertEl = document.getElementById('timeToWashAlert');
-        const coloredBarTextEl = coloredBarEl.querySelector('span'); // Get span inside colored bar
-        const whiteBarTextEl = whiteBarEl.querySelector('span'); // Get span inside white bar
-        const fullnessBarTextEl = fullnessBarEl.querySelector('span'); // Get span inside fullness bar
 
 
         // --- Firebase Data Listener ---
@@ -232,42 +247,39 @@
             console.log("Received data:", data); // Log received data for debugging
 
             if (data) {
-                // --- Update Bin Fullness ---
-                const leftOccupancy = data.leftBinOccupancy || 0;
-                const rightOccupancy = data.rightBinOccupancy || 0;
-                const overallFullness = data.overallFullness || 0; // Use overallFullness directly if available, otherwise calculate
+                // --- Get Occupancy Data ---
+                // Assume left bin is for darks, right bin is for lights
+                const leftOccupancy = data.leftBinOccupancy || 0; // Percentage (0-100)
+                const rightOccupancy = data.rightBinOccupancy || 0; // Percentage (0-100)
+                const overallFullness = data.overallFullness || 0; // Use overallFullness directly
 
-                updateElement(leftBinOccupancyEl, leftBinBarEl, leftOccupancy, false); // No text in these bars
-                updateElement(rightBinOccupancyEl, rightBinBarEl, rightOccupancy, false); // No text in these bars
-                updateElement(overallFullnessEl, fullnessBarEl, overallFullness, true, fullnessBarTextEl); // Text needed here
+                // --- Update Bin Fullness Card ---
+                updateProgressBar(leftBinOccupancyEl, leftBinBarEl, leftOccupancy);
+                updateProgressBar(rightBinOccupancyEl, rightBinBarEl, rightOccupancy);
+                updateProgressBar(overallFullnessEl, fullnessBarEl, overallFullness, fullnessBarTextEl);
 
-                // --- Calculate Clothing Distribution Ratio ---
-                const totalOccupancy = leftOccupancy + rightOccupancy;
+                // Update Fullness Bar Color based on overall fullness
+                updateFullnessBarColor(fullnessBarEl, overallFullness);
+
+                // --- Calculate and Update Dark vs Light Ratio Card ---
+                // We need a way to determine the *amount* in each bin, not just percentage full.
+                // For this example, we'll *assume* the occupancy percentage directly relates
+                // to the proportion of dark/light clothes *if both bins were combined*.
+                // This is an approximation. A better system might track item counts.
+                const totalCombinedOccupancy = leftOccupancy + rightOccupancy; // This might exceed 100 if bins are full
                 let darkRatio = 0;
                 let lightRatio = 0;
 
-                if (totalOccupancy > 0) {
-                    darkRatio = (leftOccupancy / totalOccupancy) * 100;
-                    lightRatio = (rightOccupancy / totalOccupancy) * 100;
+                if (totalCombinedOccupancy > 0) {
+                    // Calculate ratio based on the *relative* occupancy of each bin
+                    darkRatio = (leftOccupancy / totalCombinedOccupancy) * 100;
                 }
-                 // Ensure ratios don't exceed 100 due to potential floating point issues
-                darkRatio = Math.min(darkRatio, 100);
-                lightRatio = Math.min(lightRatio, 100);
+                 // Ensure ratios are valid percentages
+                darkRatio = Math.max(0, Math.min(Math.round(darkRatio), 100));
+                lightRatio = 100 - darkRatio;
 
+                updateRatioDisplay(darkRatio, lightRatio);
 
-                // --- Update Clothing Distribution UI ---
-                updateElement(coloredPercentageEl, coloredBarEl, darkRatio, true, coloredBarTextEl);
-                updateElement(whitePercentageEl, whiteBarEl, lightRatio, true, whiteBarTextEl);
-
-
-                // --- Update Fullness Bar Color ---
-                if (overallFullness > 80) {
-                    fullnessBarEl.className = fullnessBarEl.className.replace(/progress-bar-fullness-\w+/g, 'progress-bar-fullness-high');
-                } else if (overallFullness > 50) {
-                     fullnessBarEl.className = fullnessBarEl.className.replace(/progress-bar-fullness-\w+/g, 'progress-bar-fullness-medium');
-                } else {
-                     fullnessBarEl.className = fullnessBarEl.className.replace(/progress-bar-fullness-\w+/g, 'progress-bar-fullness-low');
-                }
 
                 // --- Update Date Information ---
                 if (data.lastLaundryDate) {
@@ -279,49 +291,39 @@
                 }
 
                 // --- Update Last Update Time ---
-                if (data.lastUpdate) {
-                    // Format timestamp for better readability
-                    try {
-                       const updateDate = new Date(data.lastUpdate);
-                       lastUpdateEl.textContent = updateDate.toLocaleString();
-                    } catch (e) {
-                       lastUpdateEl.textContent = data.lastUpdate; // Fallback to raw string
-                       console.warn("Could not parse lastUpdate timestamp:", data.lastUpdate);
-                    }
-                } else {
-                    lastUpdateEl.textContent = new Date().toLocaleString(); // Use current time if not provided
-                }
+                updateLastUpdateTime(data.lastUpdate);
 
                 // --- Show/Hide "Time to Wash" Alert ---
                 // Trigger alert if overall fullness is high (e.g., > 80%)
-                const showWashAlert = overallFullness > 80; // Example threshold
+                const showWashAlert = overallFullness > 80; // Threshold
                 timeToWashAlertEl.style.display = showWashAlert ? 'block' : 'none';
 
             } else {
                  console.warn("No data received from Firebase.");
-                 // Optionally reset the dashboard if no data is found
+                 // Reset the dashboard to default values if no data is found
                  resetDashboard();
             }
         }, (error) => {
              console.error("Firebase read failed:", error);
-             alert("Error reading data from Firebase. Check console for details.");
-             // Optionally reset or show an error state on the dashboard
+             // Show an error message to the user
+             document.body.insertAdjacentHTML('afterbegin', `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert"><strong class="font-bold">Firebase Error!</strong><span class="block sm:inline"> Could not read data. Check console.</span></div>`);
+             // Reset or show an error state on the dashboard
              resetDashboard();
         });
 
         // --- Helper Functions ---
 
         /**
-         * Updates a text element and optionally a progress bar.
-         * @param {HTMLElement} textElement - The element displaying the percentage text.
+         * Updates a text element and its corresponding progress bar.
+         * @param {HTMLElement} textElement - The element displaying the percentage text (optional).
          * @param {HTMLElement} barElement - The progress bar element.
          * @param {number} value - The percentage value (0-100).
-         * @param {boolean} showTextInBar - Whether to show the percentage text inside the bar.
-         * @param {HTMLElement} barTextElement - The specific span element inside the bar for text.
+         * @param {HTMLElement|null} barTextElement - The specific span element inside the bar for text (optional).
          */
-        function updateElement(textElement, barElement, value, showTextInBar = false, barTextElement = null) {
+        function updateProgressBar(textElement, barElement, value, barTextElement = null) {
             const roundedValue = Math.round(value);
-            const formattedValue = `${roundedValue}%`;
+            const clampedValue = Math.max(0, Math.min(roundedValue, 100)); // Ensure value is 0-100
+            const formattedValue = `${clampedValue}%`;
 
             if (textElement) {
                 textElement.textContent = formattedValue;
@@ -329,18 +331,50 @@
 
             if (barElement) {
                 barElement.style.width = formattedValue;
-                if (showTextInBar && barTextElement) {
+                if (barTextElement) { // If a specific element for text inside the bar is provided
                      barTextElement.textContent = formattedValue;
-                } else if (showTextInBar && !barTextElement) {
-                    // Fallback if the specific text element wasn't passed but text is requested
-                    // This might happen if the bar structure changes
-                    barElement.textContent = formattedValue;
-                } else if (!showTextInBar && barTextElement) {
-                    // Ensure text is cleared if not needed
-                    barTextElement.textContent = '';
                 }
             }
         }
+
+        /**
+         * Updates the color classes of the overall fullness progress bar based on the value.
+         * @param {HTMLElement} barElement - The fullness progress bar element.
+         * @param {number} value - The percentage value (0-100).
+         */
+        function updateFullnessBarColor(barElement, value) {
+            // Remove existing color classes
+            barElement.classList.remove('progress-bar-fullness-low', 'progress-bar-fullness-medium', 'progress-bar-fullness-high');
+
+            // Add the appropriate color class
+            if (value > 80) {
+                barElement.classList.add('progress-bar-fullness-high');
+            } else if (value > 50) {
+                 barElement.classList.add('progress-bar-fullness-medium');
+            } else {
+                 barElement.classList.add('progress-bar-fullness-low');
+            }
+        }
+
+        /**
+         * Updates the dark/light ratio text and split progress bar.
+         * @param {number} darkPercent - Percentage of dark items (0-100).
+         * @param {number} lightPercent - Percentage of light items (0-100).
+         */
+        function updateRatioDisplay(darkPercent, lightPercent) {
+            // Update text elements
+            darkRatioTextEl.textContent = `${darkPercent}%`;
+            lightRatioTextEl.textContent = `${lightPercent}%`;
+
+            // Update the width of the split bar segments
+            darkRatioBarEl.style.width = `${darkPercent}%`;
+            lightRatioBarEl.style.width = `${lightPercent}%`;
+
+            // Optional: Update text inside the bars if needed (can be distracting)
+            // darkRatioBarTextSpan.textContent = darkPercent > 10 ? `${darkPercent}%` : ''; // Only show if space allows
+            // lightRatioBarTextSpan.textContent = lightPercent > 10 ? `${lightPercent}%` : '';
+        }
+
 
         /**
          * Formats a date string (assuming YYYY-MM-DD or parsable format) to MM/DD/YYYY.
@@ -349,11 +383,15 @@
          */
         function formatDate(dateStr) {
             try {
-                const date = new Date(dateStr + 'T00:00:00'); // Add time part to avoid timezone issues
-                if (isNaN(date.getTime())) { // Check if date is valid
-                    throw new Error("Invalid date string");
+                // Attempt to create a date object, add T00:00:00 to avoid timezone interpretation issues
+                const date = new Date(dateStr + 'T00:00:00');
+                if (isNaN(date.getTime())) { // Check if the created date is valid
+                    throw new Error("Invalid date string provided");
                 }
-                // Use Intl for better locale support, but fallback for simplicity here
+                // Use Intl.DateTimeFormat for locale-aware formatting (recommended)
+                // return new Intl.DateTimeFormat('en-US').format(date); // Example: US format
+
+                // Manual formatting (fallback)
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 const year = date.getFullYear();
@@ -371,47 +409,85 @@
          */
         function calculateDaysDifference(dateStr) {
              try {
-                const laundryDate = new Date(dateStr + 'T00:00:00'); // Ensure consistent time part
-                if (isNaN(laundryDate.getTime())) {
-                     throw new Error("Invalid date string");
-                }
-                const today = new Date();
+                 const laundryDate = new Date(dateStr + 'T00:00:00'); // Ensure consistent time part
+                 if (isNaN(laundryDate.getTime())) {
+                     throw new Error("Invalid date string for difference calculation");
+                 }
+                 const today = new Date();
 
-                // Reset time part for accurate day calculation
-                laundryDate.setHours(0, 0, 0, 0);
-                today.setHours(0, 0, 0, 0);
+                 // Reset time part of both dates to compare days accurately
+                 laundryDate.setHours(0, 0, 0, 0);
+                 today.setHours(0, 0, 0, 0);
 
-                // Calculate difference in milliseconds and convert to days
-                const diffTime = today - laundryDate;
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                 // Calculate difference in milliseconds and convert to days
+                 const diffTime = today - laundryDate; // Difference in milliseconds
+                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
 
-                return Math.max(0, diffDays); // Ensure it's not negative
-             } catch(e) {
-                 console.warn("Could not calculate date difference for:", dateStr, e);
-                 return 0; // Return 0 on error
-             }
+                 return Math.max(0, diffDays); // Ensure result is not negative
+              } catch(e) {
+                  console.warn("Could not calculate date difference for:", dateStr, e);
+                  return 0; // Return 0 on error
+              }
         }
 
+         /**
+         * Updates the 'Last Updated' timestamp display.
+         * @param {string | number | undefined} timestamp - The timestamp from Firebase (can be various formats).
+         */
+        function updateLastUpdateTime(timestamp) {
+            let updateText = '-';
+            if (timestamp) {
+                try {
+                    // Attempt to create a Date object from the timestamp
+                    const updateDate = new Date(timestamp);
+                    // Check if the date is valid
+                    if (!isNaN(updateDate.getTime())) {
+                         // Format the date and time for display
+                         updateText = updateDate.toLocaleString(); // Uses browser's locale settings
+                    } else {
+                        // If timestamp is not directly parsable as a date, display it as is
+                        updateText = String(timestamp);
+                        console.warn("Last update timestamp was not a standard parsable format:", timestamp);
+                    }
+                } catch (e) {
+                     // Fallback to raw string if Date object creation fails
+                     updateText = String(timestamp);
+                     console.error("Error processing last update timestamp:", timestamp, e);
+                }
+            } else {
+                 // If no timestamp provided, use the current time as a fallback
+                 updateText = new Date().toLocaleString();
+            }
+             lastUpdateEl.textContent = updateText;
+        }
+
+
         /**
-         * Resets all dashboard elements to their default state.
+         * Resets all dashboard elements to their default/initial state.
          */
          function resetDashboard() {
-            console.log("Resetting dashboard...");
-            updateElement(coloredPercentageEl, coloredBarEl, 0, true, coloredBarTextEl);
-            updateElement(whitePercentageEl, whiteBarEl, 0, true, whiteBarTextEl);
-            updateElement(overallFullnessEl, fullnessBarEl, 0, true, fullnessBarTextEl);
-            updateElement(leftBinOccupancyEl, leftBinBarEl, 0, false);
-            updateElement(rightBinOccupancyEl, rightBinBarEl, 0, false);
-            lastLaundryDateEl.textContent = '-';
-            daysSinceWashEl.textContent = '0';
-            lastUpdateEl.textContent = '-';
-            timeToWashAlertEl.style.display = 'none';
-            // Reset fullness bar color
-            fullnessBarEl.className = fullnessBarEl.className.replace(/progress-bar-fullness-\w+/g, 'progress-bar-fullness-low');
+             console.log("Resetting dashboard...");
+             // Reset Ratio Card
+             updateRatioDisplay(0, 0); // Sets text and bar widths
+
+             // Reset Fullness Card
+             updateProgressBar(overallFullnessEl, fullnessBarEl, 0, fullnessBarTextEl);
+             updateProgressBar(leftBinOccupancyEl, leftBinBarEl, 0);
+             updateProgressBar(rightBinOccupancyEl, rightBinBarEl, 0);
+             updateFullnessBarColor(fullnessBarEl, 0); // Reset color
+
+             // Reset Info Card
+             lastLaundryDateEl.textContent = '-';
+             daysSinceWashEl.textContent = '0';
+             lastUpdateEl.textContent = '-';
+
+             // Hide Alert
+             timeToWashAlertEl.style.display = 'none';
          }
 
-         // Initial call to potentially set defaults if Firebase connection is delayed
-         // resetDashboard(); // You might uncomment this if you want defaults shown immediately
+         // Optional: Call resetDashboard on initial load to show default values
+         // while waiting for the first Firebase update.
+         // resetDashboard();
 
     </script>
 </body>
