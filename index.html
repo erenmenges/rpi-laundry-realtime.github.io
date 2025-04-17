@@ -195,7 +195,7 @@
       ratioEl.textContent = `Darks: ${darkPct}% | Lights: ${lightPct}%`;
 
       // Show warning if any bin > 90%
-      if (leftOccupancy > 90 || rightOccupancy > 90) {
+      if (leftOccupancy > 80 || rightOccupancy > 80) {
         warningTextEl.textContent = "Time to wash!";
         warningStat.style.display = "block";
       } else {
