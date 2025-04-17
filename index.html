@@ -80,6 +80,11 @@
       font-weight: 500;
       margin: 0;
     }
+    /* Warning panel overrides */
+    #warningStat {
+      background: rgba(255, 0, 0, 0.2);
+      color: #ffdddd;
+    }
     /* Footer */
     .footer {
       font-size: 0.9em;
@@ -99,18 +104,43 @@
       <h1><i class="fas fa-tshirt icon"></i>Smart Laundry Basket</h1>
       <p>Real-Time Laundry Status</p>
     </header>
+
+    <!-- New: Left Bin Occupancy -->
+    <section class="stat" id="leftBinStat">
+      <h2><i class="fas fa-box icon"></i>Left Bin Occupancy</h2>
+      <p id="leftBinOccupancy">--%</p>
+    </section>
+
+    <!-- New: Right Bin Occupancy -->
+    <section class="stat" id="rightBinStat">
+      <h2><i class="fas fa-box-open icon"></i>Right Bin Occupancy</h2>
+      <p id="rightBinOccupancy">--%</p>
+    </section>
+
+    <!-- Existing: Overall Fullness -->
     <section class="stat" id="fullnessStat">
       <h2><i class="fas fa-tachometer-alt icon"></i>Overall Fullness</h2>
       <p id="fullness">--%</p>
     </section>
+
+    <!-- Existing: Last Laundry Date -->
     <section class="stat" id="lastLaundryStat">
       <h2><i class="fas fa-calendar-alt icon"></i>Last Laundry Date</h2>
       <p id="lastLaundryDate">--</p>
     </section>
+
+    <!-- Existing: Darks vs. Lights Ratio -->
     <section class="stat" id="ratioStat">
       <h2><i class="fas fa-balance-scale icon"></i>Darks vs. Lights</h2>
       <p id="ratio">--</p>
     </section>
+
+    <!-- New: Warning -->
+    <section class="stat" id="warningStat" style="display: none;">
+      <h2><i class="fas fa-exclamation-triangle icon"></i>Warning</h2>
+      <p id="warningText"></p>
+    </section>
+
     <div class="footer">
       Auto-updated in real time via Firebase
     </div>
@@ -118,11 +148,9 @@
 
   <!-- Firebase SDK Scripts -->
   <script type="module">
-    // Import necessary Firebase SDK functions (Modular SDK v9+)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // Your Firebase configuration – replace placeholders with actual values
     const firebaseConfig = {
       apiKey: "AIzaSyDw2Y07IYmFYz2IokzHlvirDhhDOG1cloI",
       authDomain: "rpi-laundry-realtime.firebaseapp.com",
@@ -133,38 +161,45 @@
       appId: "1:671997705566:web:1dcfacfbfab2b0a86f23cf"
     };
 
-    // Initialize Firebase and the Realtime Database
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const dbRef = ref(db, '/');
 
-    // Get references to DOM elements for real-time updates
-    const fullnessEl = document.getElementById('fullness');
+    // DOM references
+    const leftBinEl     = document.getElementById('leftBinOccupancy');
+    const rightBinEl    = document.getElementById('rightBinOccupancy');
+    const fullnessEl    = document.getElementById('fullness');
     const lastLaundryEl = document.getElementById('lastLaundryDate');
-    const ratioEl = document.getElementById('ratio');
+    const ratioEl       = document.getElementById('ratio');
+    const warningStat   = document.getElementById('warningStat');
+    const warningTextEl = document.getElementById('warningText');
 
-    // Listen for updates from Firebase and update the dashboard
     onValue(dbRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Assume left occupancy corresponds to dark items and right occupancy to light items
-        const leftOccupancy = parseFloat(data.leftBinOccupancy) || 0;
-        const rightOccupancy = parseFloat(data.rightBinOccupancy) || 0;
-        const overallFullness = data.overallFullness !== undefined ? data.overallFullness : 0;
-        const lastLaundryDate = data.lastLaundryDate || "N/A";
+      const data = snapshot.val() || {};
 
-        // Compute the dark/light ratio percentages
-        const totalOccupancy = leftOccupancy + rightOccupancy;
-        let darksPercent = 0, lightsPercent = 0;
-        if (totalOccupancy > 0) {
-          darksPercent = Math.round((leftOccupancy / totalOccupancy) * 100);
-          lightsPercent = 100 - darksPercent;
-        }
+      const leftOccupancy  = parseFloat(data.leftBinOccupancy)  || 0;
+      const rightOccupancy = parseFloat(data.rightBinOccupancy) || 0;
+      const overallFullness = data.overallFullness !== undefined ? data.overallFullness : 0;
+      const lastLaundryDate = data.lastLaundryDate || "N/A";
 
-        // Update the dashboard with the new data
-        fullnessEl.textContent = overallFullness + "%";
-        lastLaundryEl.textContent = lastLaundryDate;
-        ratioEl.textContent = `Darks: ${darksPercent}% | Lights: ${lightsPercent}%`;
+      // Update occupancy displays
+      leftBinEl.textContent  = `${leftOccupancy}%`;
+      rightBinEl.textContent = `${rightOccupancy}%`;
+      fullnessEl.textContent = `${overallFullness}%`;
+      lastLaundryEl.textContent = lastLaundryDate;
+
+      // Compute Darks/Lights ratio
+      const total = leftOccupancy + rightOccupancy;
+      const darkPct  = total > 0 ? Math.round((leftOccupancy / total) * 100) : 0;
+      const lightPct = total > 0 ? 100 - darkPct : 0;
+      ratioEl.textContent = `Darks: ${darkPct}% | Lights: ${lightPct}%`;
+
+      // Show warning if any bin > 90%
+      if (leftOccupancy > 90 || rightOccupancy > 90) {
+        warningTextEl.textContent = "Time to wash!";
+        warningStat.style.display = "block";
+      } else {
+        warningStat.style.display = "none";
       }
     });
   </script>
